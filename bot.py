@@ -13,7 +13,7 @@ from telegram.ext import (
 )
 
 # Data file
-DATA_FILE = "./data/pool_data.json"
+DATA_FILE = "/data/pool_data.json"
 load_dotenv()
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 

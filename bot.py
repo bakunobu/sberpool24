@@ -82,12 +82,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
+    data = load_data()
+
     if query.data == "add_player":
         await query.edit_message_text("Send the name of the new player.")
         context.user_data["awaiting"] = "add_player"
 
     elif query.data == "add_game":
-        data = load_data()
         if len(data["players"]) < 2:
             await query.edit_message_text("You need at least 2 players to record a game.")
             return
@@ -96,6 +97,50 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif query.data == "show_stats":
         await show_general_stats(update, context)
+
+    elif query.data == "show_table":
+        table = get_all_players_stats(data)
+        if not table:
+            await query.edit_message_text("No games recorded yet.")
+            return
+        table_rows = [f"🔹 `{p['name']:<12}` | {p['total']:^4} | {p['wins']:^4} | {p['losses']:^5} | {p['win_rate']:^6}%`" for p in table]
+        msg = (
+            "```\n" +
+            f"{'Name':<12} | {'T' :^4} | {'W' :^4} | {'L' :^5} | {'WR' :^6}%\n" +
+            "-" * 40 + "\n" +
+            "\n".join(table_rows) +
+            "\n```"
+        )
+        keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="start")]]
+        await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+
+    elif query.data == "start":
+        keyboard = [
+            [InlineKeyboardButton("🎯 Add Player", callback_data="add_player")],
+            [InlineKeyboardButton("📊 Add Game Result", callback_data="add_game")],
+            [InlineKeyboardButton("📈 Show General Stats", callback_data="show_stats")],
+            [InlineKeyboardButton("📋 All Players Table", callback_data="show_table")],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text("Welcome to Pool Match Tracker! Choose an option:", reply_markup=reply_markup)
+# async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     query = update.callback_query
+#     await query.answer()
+
+#     if query.data == "add_player":
+#         await query.edit_message_text("Send the name of the new player.")
+#         context.user_data["awaiting"] = "add_player"
+
+#     elif query.data == "add_game":
+#         data = load_data()
+#         if len(data["players"]) < 2:
+#             await query.edit_message_text("You need at least 2 players to record a game.")
+#             return
+#         context.user_data["awaiting"] = "add_game_winner"
+#         await query.edit_message_text("Send the winner’s name.")
+
+#     elif query.data == "show_stats":
+#         await show_general_stats(update, context)
 
 # Add player
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -136,39 +181,39 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await start(update, context)
 
 # Show general stats
-async def show_general_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    data = load_data()
-    games = data["games"]
-    if not games:
-        await update.callback_query.edit_message_text("No games played yet.")
-        return
+# async def show_general_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     data = load_data()
+#     games = data["games"]
+#     if not games:
+#         await update.callback_query.edit_message_text("No games played yet.")
+#         return
 
-    wins = {}
-    for game in games:
-        winner = game["winner"]
-        loser = game["loser"]
-        wins[winner] = wins.get(winner, 0) + 1
-        wins[loser] = wins.get(loser, 0)
+#     wins = {}
+#     for game in games:
+#         winner = game["winner"]
+#         loser = game["loser"]
+#         wins[winner] = wins.get(winner, 0) + 1
+#         wins[loser] = wins.get(loser, 0)
 
-    total_games = len(games)
-    win_rate = {p: (wins[p] / total_games) * 100 for p in wins}
-    top_player = max(wins, key=wins.get)
+#     total_games = len(games)
+#     win_rate = {p: (wins[p] / total_games) * 100 for p in wins}
+#     top_player = max(wins, key=wins.get)
 
-    message = (
-        f"📊 *General Stats*\n\n"
-        f"Total games played: {total_games}\n"
-        f"Top player: *{top_player}* ({wins[top_player]} wins)\n"
-        f"Best win rate: {top_player} ({win_rate[top_player]:.1f}%)"
-    )
+#     message = (
+#         f"📊 *General Stats*\n\n"
+#         f"Total games played: {total_games}\n"
+#         f"Top player: *{top_player}* ({wins[top_player]} wins)\n"
+#         f"Best win rate: {top_player} ({win_rate[top_player]:.1f}%)"
+#     )
 
-    keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="start")]]
-    if update.callback_query:
-        await update.callback_query.edit_message_text(message, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
-    else:
-        await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+#     keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="start")]]
+#     if update.callback_query:
+#         await update.callback_query.edit_message_text(message, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+#     else:
+#         await update.message.reply_text(message, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
-    # Add player vs player buttons
-    await show_pvp_menu(update, context)
+#     # Add player vs player buttons
+#     await show_pvp_menu(update, context)
 
 # Show player vs player selection
 async def show_pvp_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -326,18 +371,36 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Main
 def main():
-    app = Application.builder().token(BOT_TOKEN).build()  # ← Replace with your token
+    app = Application.builder().token(BOT_TOKEN).build()
 
+    # Command handler
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(button_handler))
-    app.add_handler(CallbackQueryHandler(show_general_stats, pattern="show_stats"))
-    app.add_handler(CallbackQueryHandler(start, pattern="start"))
+
+    # Button handler (must come before specific CallbackQueryHandlers)
+    app.add_handler(CallbackQueryHandler(button_handler))  # ← This handles add_player, add_game, show_stats, etc.
+
+    # Specific handlers
     app.add_handler(CallbackQueryHandler(show_pvp_stats, pattern=r"^pvp:"))
+
+    # Message handler
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.add_handler(CallbackQueryHandler(button_handler, pattern="^add_player|add_game|show_stats|show_table|start|pvp:"))
 
     print("Bot is running... Press Ctrl+C to stop.")
     app.run_polling()
+
+# def main():
+#     app = Application.builder().token(BOT_TOKEN).build()  # ← Replace with your token
+
+#     app.add_handler(CommandHandler("start", start))
+#     app.add_handler(CallbackQueryHandler(button_handler))
+#     app.add_handler(CallbackQueryHandler(show_general_stats, pattern="show_stats"))
+#     app.add_handler(CallbackQueryHandler(start, pattern="start"))
+#     app.add_handler(CallbackQueryHandler(show_pvp_stats, pattern=r"^pvp:"))
+#     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+#     app.add_handler(CallbackQueryHandler(button_handler, pattern="^add_player|add_game|show_stats|show_table|start|pvp:"))
+
+#     print("Bot is running... Press Ctrl+C to stop.")
+#     app.run_polling()
 
 if __name__ == "__main__":
     main()

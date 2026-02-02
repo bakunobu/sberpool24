@@ -123,24 +123,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text("Welcome to Pool Match Tracker! Choose an option:", reply_markup=reply_markup)
-# async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-#     query = update.callback_query
-#     await query.answer()
-
-#     if query.data == "add_player":
-#         await query.edit_message_text("Send the name of the new player.")
-#         context.user_data["awaiting"] = "add_player"
-
-#     elif query.data == "add_game":
-#         data = load_data()
-#         if len(data["players"]) < 2:
-#             await query.edit_message_text("You need at least 2 players to record a game.")
-#             return
-#         context.user_data["awaiting"] = "add_game_winner"
-#         await query.edit_message_text("Send the winner’s name.")
-
-#     elif query.data == "show_stats":
-#         await show_general_stats(update, context)
 
 # Add player
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
